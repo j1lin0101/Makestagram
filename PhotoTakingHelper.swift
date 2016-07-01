@@ -61,7 +61,7 @@ class PhotoTakingHelper: NSObject {
 extension PhotoTakingHelper: UIImagePickerControllerDelegate, UINavigationControllerDelegate{
     
     
-    func imagePickerController(picker: UIImagePickerController, didFinishPickingImage image: UIImage!, editingInfo: [String : AnyObject]!) {
+    func imagePickerController(picker: UIImagePickerController, didFinishPickingImage image: UIImage, editingInfo: [String : AnyObject]?) {
         viewController.dismissViewControllerAnimated(false, completion: nil)
         
         callBack(image)

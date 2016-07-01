@@ -7,12 +7,41 @@
 //
 
 import UIKit
+import Bond
+import Parse
 
 class PostTableViewCell: UITableViewCell {
 
     @IBOutlet weak var postImageView: UIImageView!
+    @IBOutlet weak var likeIconImageView: UIImageView!
+    @IBOutlet weak var likesLabel: UILabel!
+    @IBOutlet weak var likeButton: UIButton!
+    @IBOutlet weak var moreButton: UIButton!
+   
+    var postDisposable: DisposableType?
+    var likeDisposable: DisposableType?
     
-        override func awakeFromNib() {
+    var post: Post? {
+        didSet {
+            if let post = post {
+                postDisposable = post.image.bindTo(postImageView.bnd_image)
+                likeDisposable = post.likes.observe { (value: [PFUser]?) -> () in
+                    if let value = value {
+                        self.likesLabel.text = self.stringFromUserList(value)
+                        self.likeButton.selected = value.contains(PFUser.currentUser()!)
+                        self.likeIconImageView.hidden = (value.count == 0)
+                    } else {
+                        self.likesLabel.text = ""
+                        self.likeButton.selected = false
+                        self.likeIconImageView.hidden = true
+                    }
+                }
+            }
+        }
+    }
+    
+    
+    override func awakeFromNib() {
         super.awakeFromNib()
         // Initialization code
     }
@@ -22,5 +51,18 @@ class PostTableViewCell: UITableViewCell {
 
         // Configure the view for the selected state
     }
+    
+    func stringFromUserList(userList: [PFUser]) -> String{
+        let usernameList = userList.map { user in user.username! }
+        let commaSeparatedUserList = usernameList.joinWithSeparator(", ")
+        return commaSeparatedUserList
+    }
 
+    @IBAction func likeButtonTapped(sender: AnyObject) {
+        post?.toggleLikePost(PFUser.currentUser()!)
+    }
+    
+    @IBAction func moreButtonTapped(sender: AnyObject) {
+    }
+    
 }

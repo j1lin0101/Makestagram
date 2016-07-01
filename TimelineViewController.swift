@@ -8,49 +8,38 @@
 
 import UIKit
 import Parse
+import ConvenienceKit
 
-class TimelineViewController: UIViewController {
+class TimelineViewController: UIViewController, TimelineComponentTarget {
     
     @IBOutlet weak var tableView: UITableView!
     
-    var posts: [Post] = []
     var photoTakingHelper: PhotoTakingHelper?
+    
+    let defaultRange = 0...4
+    let additionalRangeSize = 5
+    
+    var timelineComponent: TimelineComponent<Post, TimelineViewController>!
 
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+
+        timelineComponent = TimelineComponent(target: self)
         self.tabBarController?.delegate = self
+        
     }
     
     override func viewDidAppear(animated: Bool) {
         super.viewDidAppear(animated)
         
-        let followingQuery = PFQuery(className: "Follow")
-        followingQuery.whereKey("fromUser", equalTo: PFUser.currentUser()!)
-        
-        let postsFromFollowedUsers = Post.query()
-        postsFromFollowedUsers!.whereKey("user", matchesKey: "toUser", inQuery: followingQuery)
-        
-        let postsFromThisUser = Post.query()
-        postsFromThisUser!.whereKey("user", equalTo: PFUser.currentUser()!)
-        
-        let query = PFQuery.orQueryWithSubqueries([postsFromFollowedUsers!, postsFromThisUser!])
-        query.includeKey("user")
-        query.orderByAscending("createdAt")
-        
-        query.findObjectsInBackgroundWithBlock { (result: [PFObject]?, error: NSError?) -> Void in
-            
-            self.posts = result as? [Post] ?? []
-            
-            for post in self.posts {
-                do {
-                    let data = try post.imageFile?.getData()
-                    post.image = UIImage(data: data!, scale: 1.0)
-                } catch {
-                    print("could not get image")
-                }
-            }
-            self.tableView.reloadData()
+        timelineComponent.loadInitialIfRequired()
+    }
+    
+    func loadInRange (range: Range<Int>, completionBlock: [Post]? -> Void) {
+        ParseHelper.timelineRequestForCurrentUser(range) { (result: [PFObject]?, error: NSError?) -> Void in
+            let posts = result as? [Post] ?? []
+            completionBlock(posts)
         }
     }
 }
@@ -71,7 +60,7 @@ extension TimelineViewController: UITabBarControllerDelegate {
     func takePhoto() {
         photoTakingHelper = PhotoTakingHelper(viewController: self.tabBarController!) { (image: UIImage?) in
             let post = Post()
-            post.image = image
+            post.image.value = image!
             post.uploadPost()
         }
     }
@@ -80,21 +69,29 @@ extension TimelineViewController: UITabBarControllerDelegate {
 extension TimelineViewController: UITableViewDataSource {
     
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return posts.count
+        return timelineComponent.content.count
     }
     
     func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        
         let cell = tableView.dequeueReusableCellWithIdentifier("PostCell") as! PostTableViewCell
         
-        cell.postImageView.image = posts[indexPath.row].image
+        let post = timelineComponent.content[indexPath.row]
+        post.downloadImage()
+        post.fetchLikes()
+        cell.post = post
         
         return cell
     }
-    
 }
 
-
+extension TimelineViewController: UITableViewDelegate {
+    
+    func tableView(tableView: UITableView, willDisplayCell cell: UITableViewCell, forRowAtIndexPath indexPath: NSIndexPath) {
+        
+        timelineComponent.targetWillDisplayEntry(indexPath.row)
+    }
+    
+}
 
 
 
