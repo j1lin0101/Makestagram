@@ -44,8 +44,7 @@ extension ParseLoginHelper : PFLogInViewControllerDelegate {
             FBSDKGraphRequest(graphPath: "me", parameters: nil).startWithCompletionHandler {
             (connection: FBSDKGraphRequestConnection!, result: AnyObject?, error: NSError?) -> Void in
                 if let error = error {
-                    // Facebook Error? -> hand error to callback
-                    self.callback(nil, error)
+                    ErrorHandling.defaultErrorHandler(error)
                 }
 
                 if let fbUsername = result?["name"] as? String {
