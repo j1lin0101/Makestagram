@@ -23,9 +23,17 @@ class PostTableViewCell: UITableViewCell {
     
     var post: Post? {
         didSet {
+            postDisposable?.dispose()
+            likeDisposable?.dispose()
+            
+            if let oldValue = oldValue where oldValue != post {
+                oldValue.image.value = nil
+            }
+            
             if let post = post {
                 postDisposable = post.image.bindTo(postImageView.bnd_image)
-                likeDisposable = post.likes.observe { (value: [PFUser]?) -> () in
+                
+                likeDisposable = post.likes.observe{ (value: [PFUser]?) -> () in
                     if let value = value {
                         self.likesLabel.text = self.stringFromUserList(value)
                         self.likeButton.selected = value.contains(PFUser.currentUser()!)
@@ -39,6 +47,7 @@ class PostTableViewCell: UITableViewCell {
             }
         }
     }
+        
     
     
     override func awakeFromNib() {
